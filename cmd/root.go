@@ -78,3 +78,35 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func init() {
+	v = viper.New()
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("APP")
+	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
+	v.AutomaticEnv()
+
+	// pflags
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "config file")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "debug mode")
+
+	// initializing
+	wd := os.Getenv("APP_WD")
+	if len(wd) == 0 {
+		wd, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+	}
+	wd, _ = filepath.Abs(wd)
+	ep, _ := entrypoint.Initialize(wd, v)
+
+	// bin pflags to viper
+	_ = v.BindPFlags(rootCmd.PersistentFlags())
+
+	go func() {
+		reloadSignal := make(chan os.Signal)
+		signal.Notify(reloadSignal, syscall.SIGHUP)
+		for {
+			sig := <-reloadSignal
+			ep.Reload()
+			fmt.Printf("OS signaled `%v`, reload", sig.String())
+		}
+	}()
+}
