@@ -110,3 +110,11 @@ func init() {
 		}
 	}()
 }
+
+func Execute() {
+	rootCmd.AddCommand(daemon.Cmd, product_service.Cmd, health_check_service.Cmd, migrate.Cmd, jwt.Cmd)
+	if e := rootCmd.Execute(); e != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "%v\n", e.Error())
+		os.Exit(1)
+	}
+}
